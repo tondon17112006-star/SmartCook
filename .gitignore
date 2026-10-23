@@ -1,0 +1,46 @@
+# Dependencies and npm cache (kept inside this workspace during setup)
+node_modules/
+.npm-cache/
+
+# Build output, test coverage and temporary files
+dist/
+build/
+coverage/
+.cache/
+.vite/
+tmp/
+temp/
+*.tmp
+*.tsbuildinfo
+
+# Local environment and secrets; keep safe examples tracked
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.local
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQL Server data and backups; SQL scripts remain tracked
+*.mdf
+*.ndf
+*.ldf
+*.bak
+*.trn
+
+# Machine-specific editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

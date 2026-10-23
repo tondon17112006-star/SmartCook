@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --color-forest: #2f7d5c;
+  --color-dark-green: #1f4d3a;
+  --color-ink: #25342c;
+  --color-cream: #fff9f1;
+  --color-orange: #f59e42;
+}
+
+:root {
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--color-ink);
+  background: #fff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid #c06e20;
+  outline-offset: 5px;
+}
+
+::selection {
+  background: #d6ecdb;
+}
+
+html { scroll-padding-top: 6rem; }
+button:disabled { cursor: not-allowed; }
+select { cursor: pointer; }
+img { max-width: 100%; }
+
+@layer components {
+  .container-shell { @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10; }
+  .button-primary { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-forest px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-dark-green disabled:opacity-50; }
+  .button-secondary { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-forest/25 bg-white px-6 py-3 text-sm font-semibold text-dark-green transition-colors hover:border-forest hover:bg-forest/5 disabled:opacity-50; }
+  .button-ghost { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-forest transition-colors hover:bg-forest/5; }
+  .eyebrow { @apply text-xs font-bold uppercase tracking-[0.17em] text-forest; }
+  .section-title { @apply text-3xl font-bold leading-tight tracking-tight text-dark-green sm:text-4xl; }
+  .field { @apply min-h-12 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-ink transition-colors hover:border-forest/50 focus:border-forest; }
+  .surface-card { @apply rounded-2xl border border-stone-200/80 bg-white shadow-[0_4px_24px_-16px_rgba(31,77,58,0.25)]; }
+  .recipe-grid { @apply grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4; }
+}
+
+.hero-photo { aspect-ratio: 1.12; object-fit: cover; width: 100%; }
+.hero-image-frame::before { content: ""; position: absolute; inset: 1.4rem -0.7rem -0.9rem 1.5rem; border: 1px solid #d5e1c9; border-radius: 48% 48% 24px 24px; transform: rotate(3deg); z-index: 0; }
+.step-connector { background: repeating-linear-gradient(90deg, #b6cbbd 0, #b6cbbd 5px, transparent 5px, transparent 12px); height: 1px; }
+.skip-link { position: fixed; top: -5rem; left: 1rem; z-index: 100; padding: .75rem 1rem; border-radius: .5rem; color: white; background: #1f4d3a; }
+.skip-link:focus { top: 1rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

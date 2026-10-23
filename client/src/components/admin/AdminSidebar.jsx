@@ -1,0 +1,11 @@
+import { NavLink, Link } from 'react-router-dom'
+import { ArrowLeft, LogOut, ChefHat } from 'lucide-react'
+import { adminNavigation } from './adminNavigation.js'
+export default function AdminSidebar({ collapsed = false, compactAtTablet = false, onNavigate, onLogout, pending }) {
+  const labelClass = collapsed ? 'md:sr-only' : compactAtTablet ? 'md:sr-only lg:not-sr-only' : ''
+  return <div className="flex h-full flex-col">
+    <Link to="/admin" onClick={onNavigate} aria-label="SmartCook quản trị" className="mb-8 flex min-h-12 items-center gap-3 font-bold text-white"><span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15"><ChefHat size={25} aria-hidden="true" /></span><span className={labelClass}>SmartCook<span className="mt-0.5 block text-xs font-normal text-white/60">Quản trị hệ thống</span></span></Link>
+    <nav aria-label="Menu quản trị" className="space-y-2">{adminNavigation.map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} onClick={onNavigate} title={collapsed || compactAtTablet ? label : undefined} className={({ isActive }) => `flex min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${isActive ? 'bg-white text-dark-green' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}><Icon size={20} className="shrink-0" aria-hidden="true" /><span className={labelClass}>{label}</span></NavLink>)}</nav>
+    <div className="mt-auto space-y-2 border-t border-white/15 pt-5"><Link to="/" onClick={onNavigate} title={collapsed || compactAtTablet ? 'Quay về website' : undefined} className="flex min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/80 hover:bg-white/10"><ArrowLeft size={20} className="shrink-0" aria-hidden="true" /><span className={labelClass}>Quay về website</span></Link><button type="button" disabled={pending} onClick={onLogout} title={collapsed || compactAtTablet ? 'Đăng xuất' : undefined} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-white/80 hover:bg-white/10 disabled:opacity-50"><LogOut size={20} className="shrink-0" aria-hidden="true" /><span className={labelClass}>{pending ? 'Đang đăng xuất…' : 'Đăng xuất'}</span></button></div>
+  </div>
+}

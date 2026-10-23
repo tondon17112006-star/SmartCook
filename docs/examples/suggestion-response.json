@@ -1,0 +1,85 @@
+{
+  "data": [
+    {
+      "recipeId": 8,
+      "recipeName": "Trứng chiên",
+      "imageUrl": null,
+      "description": "Trứng chiên hành lá mềm thơm cho bữa cơm nhanh.",
+      "prepTime": 5,
+      "cookTime": 7,
+      "totalTime": 12,
+      "servings": 2,
+      "requestedServings": 4,
+      "difficulty": "Dễ",
+      "categoryName": "Món chiên",
+      "matchedRequiredCount": 2,
+      "totalRequiredCount": 2,
+      "missingRequiredCount": 0,
+      "matchPercentage": 100,
+      "status": "ready",
+      "matchedIngredients": [
+        {
+          "ingredientId": 18,
+          "ingredientName": "Dầu ăn",
+          "quantity": 15,
+          "adjustedQuantity": 30,
+          "unit": "ml",
+          "isRequired": true,
+          "isAvailable": true,
+          "notes": "Dùng chảo chống dính đường kính khoảng 20 cm."
+        },
+        {
+          "ingredientId": 64,
+          "ingredientName": "Trứng gà",
+          "quantity": 3,
+          "adjustedQuantity": 6,
+          "unit": "quả",
+          "isRequired": true,
+          "isAvailable": true,
+          "notes": null
+        }
+      ],
+      "missingIngredients": [],
+      "optionalIngredients": [
+        {
+          "ingredientId": 28,
+          "ingredientName": "Hành lá",
+          "quantity": 10,
+          "adjustedQuantity": 20,
+          "unit": "g",
+          "isRequired": false,
+          "isAvailable": false,
+          "notes": "Thái nhỏ."
+        },
+        {
+          "ingredientId": 44,
+          "ingredientName": "Nước mắm",
+          "quantity": 5,
+          "adjustedQuantity": 10,
+          "unit": "ml",
+          "isRequired": false,
+          "isAvailable": false,
+          "notes": null
+        },
+        {
+          "ingredientId": 55,
+          "ingredientName": "Tiêu",
+          "quantity": 0.5,
+          "adjustedQuantity": 1,
+          "unit": "g",
+          "isRequired": false,
+          "isAvailable": false,
+          "notes": null
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 1,
+    "total": 13,
+    "totalPages": 13,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
+}
