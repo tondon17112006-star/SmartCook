@@ -12,20 +12,16 @@ Các lệnh npm dùng cache nằm trong `.npm-cache` của workspace. Không ch�
 | Server | `npm ls --all --json` | 0 | Cây dependency hợp lệ |
 | Client | `npm audit --json` | 0 | 0 advisory được báo |
 | Client | `npm audit --omit=dev --json` | 0 | 0 advisory production được báo |
-| Server | `npm audit --json` | 1 | 3 package node mức high, cùng một advisory gốc |
+| Server | `npm audit --json` | 0 | 0 advisory được báo |
 | Server | `npm audit --omit=dev --json` | 0 | 0 advisory production được báo |
 
-Kết quả audit chỉ phản ánh dữ liệu registry tại thời điểm kiểm tra, không chứng minh toàn bộ dependency không có lỗi bảo mật. File JSON gốc được lưu cục bộ trong `.cache/step11-client-full.json`, `step11-client-prod.json`, `step11-server-full.json`, `step11-server-prod.json`, `step11-client-ls.json`, `step11-server-ls.json`; `.cache` không đưa lên Git.
+Lần chạy lại cuối cùng trong đợt QA xác nhận cả bốn audit trên đều trả mã 0 và báo 0 advisory; `npm ls --all --json` của cả Client và Server cũng trả mã 0. Không chạy `npm audit fix`, không thay `package.json` hoặc lockfile. Kết quả audit chỉ phản ánh dữ liệu registry tại thời điểm kiểm tra, không chứng minh toàn bộ dependency không có lỗi bảo mật.
 
-## Advisory còn tồn tại trong công cụ phát triển
+## Advisory công cụ phát triển đã ghi nhận trước đó
 
-Server có chuỗi `nodemon@3.1.14 → chokidar@3.6.0 → braces@3.0.3`, chỉ thuộc **dev dependency**. `npm audit` tính cả ba package bị ảnh hưởng, không phải ba CVE độc lập.
+Lần kiểm tra trước đó của Bước 11 từng ghi một advisory dev-only ở chuỗi `nodemon@3.1.14 → chokidar@3.6.0 → braces@3.0.3`. Lần chạy lại hiện tại của `npm audit --json` không còn báo advisory này, dù dependency tree vẫn hợp lệ và không có package nào được sửa trong đợt tiếp tục QA.
 
-[GHSA-vfj7-8cjw-p6xm / CVE-2026-93687](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) mô tả nguy cơ tràn call stack khi `braces` xử lý pattern lồng quá sâu. Advisory ghi các bản `≤3.0.3` bị ảnh hưởng và chưa có phiên bản vá. `npm view` thực tế xác nhận `braces` mới nhất vẫn là `3.0.3`, `nodemon` mới nhất là `3.1.14`.
-
-Trong source hiện tại, HTTP handler không đưa input người dùng vào `braces`, `chokidar` hoặc `nodemon`. Script production `npm start` gọi `node src/server.js`; nodemon chỉ dùng cho `npm run dev`. Vì vậy chưa xác định đường khai thác từ REST API trong cấu hình hiện tại; rủi ro còn lại liên quan công cụ theo dõi file và pattern ở môi trường phát triển. Đây là phân tích phạm vi từ source và cây dependency, không phải cam kết không thể khai thác.
-
-Gợi ý tự động của npm là hạ `nodemon` xuống `1.14.10` bằng thay đổi semver major. Không áp dụng vì đây không phải bản vá tương thích của stack hiện tại. Không ép `chokidar` major mới bằng override vì nodemon đang yêu cầu nhánh 3 và cần xác minh tương thích riêng. Khi triển khai production, dùng `npm ci --omit=dev` và `npm start`; theo dõi bản vá chính thức trước lần cập nhật dependency tiếp theo. Không dùng pattern lấy từ nguồn không tin cậy cho công cụ phát triển.
+Đây là thay đổi trong dữ liệu audit từ registry, không phải bằng chứng rằng vấn đề lịch sử đã được vá ở package tree hay rằng dependency hoàn toàn không có rủi ro. Duy trì `npm ci --omit=dev` và `npm start` cho production; lặp lại audit trước mỗi lần phát hành. Không ép override hoặc nâng/hạ major dependency chỉ để thay đổi kết quả audit.
 
 ## Phiên bản cài thực tế
 

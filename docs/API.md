@@ -1,8 +1,8 @@
-# API SmartCook — Bước 9
+# API SmartCook — bao gồm Meal Planner
 
 Backend mặc định: `http://127.0.0.1:5000`. Các endpoint trả JSON, truy vấn Microsoft SQL Server `SmartCookDB`; auth đăng ký/cập nhật hồ sơ ghi vào Users. Riêng `/api/health` hoạt động độc lập với database. Sáu endpoint `GET` của Bước 3 giữ nguyên; Bước 4 bổ sung `POST /api/recipes/suggest`, Bước 8 bổ sung auth và kiểm tra quyền Admin.
 
-API món ăn gồm **7 endpoint**; phần xác thực bổ sung 7 endpoint. Bước 9 bổ sung các nhóm Favorites, Reviews và Pantry ở cuối tài liệu:
+API món ăn gồm **7 endpoint**; phần xác thực bổ sung 7 endpoint. Các phần sau mô tả Favorites, Reviews, Pantry tương thích, Admin và 5 endpoint Meal Planner. Mọi dữ liệu lịch/shopping thuộc tài khoản trong session, không phải UserID do client chọn.
 
 | Endpoint | Chức năng |
 | --- | --- |
@@ -472,7 +472,7 @@ Tất cả endpoint sau cần JWT/session hợp lệ **và Role Admin đọc t�
 | GET `/api/admin/recipes/:id` | 200 `{data:recipe}` đầy đủ ingredients/steps; không thấy404 |
 | POST `/api/admin/recipes` | 201 `{data:recipe}`, body công thức đầy đủ |
 | PATCH `/api/admin/recipes/:id` | 200 `{data:recipe}`, body một phần hoặc đầy đủ |
-| DELETE `/api/admin/recipes/:id` | 200 `{message}`, có Favorites/Reviews409 |
+| DELETE `/api/admin/recipes/:id` | 200 `{message}`, có Favorites/Reviews/MealPlanItems trả409 |
 | GET `/api/admin/categories` | 200 `{data,pagination}`; search/page/limit, có recipeCount |
 | POST `/api/admin/categories` | 201 `{data:category}`; `{categoryName,description?,imageUrl?}` |
 | PATCH `/api/admin/categories/:id` | 200 `{data:category}`; ít nhất một trường trên |
@@ -496,4 +496,66 @@ Category có categoryId/categoryName/description/imageUrl; GET list và POST có
 
 User DTO chỉ có userId/fullName/email/phone/avatar/role/createdAt, không PasswordHash/JWT/pepper. Review có reviewId/recipeId/recipeName/userId/fullName/rating/comment/createdAt; comment hiển thị văn bản. Xóa Admin review không xóa Recipes. API review User cũ vẫn áp dụng quyền sở hữu.
 
-ID/body/query sai400; thiếu đối tượng404; trùng hoặc đang được tham chiếu409; Origin/CSRF/User403; session401; lỗi SQL nội bộ không lộ truy vấn. Request JSON vẫn giới hạn100kb chung của Express. Không migration/CASCADE hoặc dữ liệu mẫu trong luồng production. Kết quả thực tế và giới hạn fixture tại [STEP10_VERIFICATION.md](STEP10_VERIFICATION.md).
+ID/body/query sai400; thiếu đối tượng404; trùng hoặc đang được tham chiếu409; Origin/CSRF/User403; session401; lỗi SQL nội bộ không lộ truy vấn. Request JSON vẫn giới hạn100kb chung của Express. Không CASCADE hoặc dữ liệu mẫu trong luồng production. Bước10 không cần migration; Meal Planner mới dùng migration001 bổ sung như phần bên dưới. Kết quả lịch sử Bước10 và giới hạn fixture tại [STEP10_VERIFICATION.md](STEP10_VERIFICATION.md).
+
+## Meal Planner và Shopping List
+
+Nhóm `/api/meal-plans` dùng cùng JWT HttpOnly Cookie, session store, middleware xác thực, CSRF và Origin hiện có. User và Admin chỉ thao tác **lịch riêng của mình**; Admin không có API đọc chéo lịch người khác. UserID lấy từ `req.user.userId`, không nhận qua body/query. Response riêng có `Cache-Control: private, no-store`.
+
+| Endpoint | Request | Phản hồi thành công |
+| --- | --- | --- |
+| GET `/api/meal-plans?weekStart=YYYY-MM-DD` | `weekStart` bắt buộc, đúng thứ Hai | 200 `{data:{mealPlanId,weekStart,weekEnd,days,summary}}` |
+| GET `/api/meal-plans/shopping-list?weekStart=YYYY-MM-DD` | Cùng quy tắc tuần | 200 `{data:{weekStart,weekEnd,items}}` |
+| POST `/api/meal-plans/items` | JSON `{recipeId,mealDate,mealType,servings,sortOrder?}` | 201 `{data:item}` |
+| PATCH `/api/meal-plans/items/:id` | JSON có ít nhất `mealDate`, `mealType`, `servings` hoặc `sortOrder` | 200 `{data:item}` |
+| DELETE `/api/meal-plans/items/:id` | JSON `{}` | 200 `{message}` |
+
+GET không tạo lịch. Tuần chưa có dữ liệu trả `mealPlanId: null`, đủ 7 ngày và 3 mảng bữa rỗng/ngày; summary bằng 0. Một lịch rỗng đã tồn tại sau xóa món cuối vẫn có MealPlanID và trả cùng cấu trúc ngày. Không có lịch mẫu tự động hoặc ghi vào localStorage thay SQL.
+
+### Ngày, bữa, định danh và khẩu phần
+
+- Ngày phải là chuỗi Gregory chính xác `YYYY-MM-DD`, không timestamp. Backend tính ngày lịch độc lập timezone; nút Tuần này/Hôm nay phía client dùng `Asia/Ho_Chi_Minh`.
+- `weekStart` phải là thứ Hai; tuần kết thúc Chủ nhật. Miền hỗ trợ gồm các tuần đầy đủ từ `0001-01-01` tới tuần bắt đầu `9999-12-20`, ngày cuối `9999-12-26`.
+- `mealType` đúng `Breakfast`, `Lunch`, `Dinner`, có phân biệt hoa/thường; UI lần lượt hiển thị Sáng, Trưa, Tối.
+- `recipeId` là JSON SQL INT dương và phải tồn tại; `servings` là JSON integer 1–20. `sortOrder` là JSON integer 0–2147483647, mặc định 0 khi thêm; UI hiện không có kéo thả/thay thứ tự trực tiếp.
+- ID trên path là số nguyên dương dạng thập phân như convention chung. PATCH không đổi RecipeID; muốn chọn công thức khác thì thêm mục mới/xóa mục cũ có xác nhận.
+- Chỉ nhận các trường đã nêu. Query mutation phải rỗng; GET chỉ nhận một `weekStart`. UserID/role/MealPlanID hoặc trường lạ bị400, không dùng để chọn chủ sở hữu.
+
+POST xác định thứ Hai từ `mealDate`, tạo MealPlans nếu chưa có và thêm item trong một transaction. Một bữa có nhiều món; UNIQUE `(MealPlanID, MealDate, MealType, RecipeID)` ngăn trùng cùng món trong cùng bữa/ngày. Cùng RecipeID vẫn có thể nằm ở ngày hoặc bữa khác.
+
+PATCH có thể chuyển item sang tuần khác: repository tìm/tạo lịch đích thuộc cùng User và cập nhật MealPlanID trong cùng transaction. Chủ sở hữu được khóa theo thứ tự nhất quán; production dùng SERIALIZABLE, UPDLOCK/HOLDLOCK và UNIQUE làm hàng rào race. Deadlock SQL1205 được retry toàn transaction tối đa hai lần rồi trả lỗi nghiệp vụ409. Lỗi giữa chừng rollback, không để lại lịch đích/item ghi dở. DELETE chỉ xóa MealPlanItem và cập nhật timestamp lịch, không xóa Recipes hoặc dữ liệu cá nhân khác.
+
+### DTO lịch
+
+`days` có 7 phần tử theo thứ tự thứ Hai–Chủ nhật:
+
+```text
+{date, meals:{Breakfast:[item,...], Lunch:[item,...], Dinner:[item,...]}}
+```
+
+`summary` gồm `itemCount` (số lần lên món), `mealCount` (bữa có ít nhất một món), `dayCount` (ngày có món), `ingredientCount` (IngredientID bắt buộc khác nhau trong tuần).
+
+Mỗi item có `mealPlanItemId`, `mealPlanId`, `recipeId`, `recipeName`, `imageUrl`, `mealDate`, `mealType`, `servings`, `originalServings`, `prepTime`, `cookTime`, `totalTime`, `sortOrder`. ID/thời gian/khẩu phần/thứ tự là JSON number; ngày là chuỗi DATE, ảnh nullable. Metadata công thức được join từ Recipes hiện tại, không sao chép vào MealPlanItems. Thứ tự: ngày, Breakfast/Lunch/Dinner, SortOrder, MealPlanItemID.
+
+### DTO và phép tính Shopping List
+
+Mỗi dòng `items` có `ingredientId`, `ingredientName`, `ingredientCategory`, `unit`, `totalQuantity`, `recipeCount`, `plannedItemCount`, `recipes:[{recipeId,recipeName}]`. `totalQuantity` là **chuỗi decimal**, không phải JSON number; giữ chuỗi khi hiển thị để tránh mất chính xác tổng lớn.
+
+Mỗi mục đóng góp `RecipeIngredients.Quantity × PlannedServings / Recipes.Servings`. SQL DECIMAL được đọc thành text, Backend cộng các phân số bằng BigInt rồi làm tròn **lên** ở tối đa 6 chữ số thập phân cho kết quả dương. Chỉ gộp khi IngredientID và Unit đúng chuỗi cùng nhau; không quy đổi g/kg, ml/l, số quả/khối lượng hoặc tự đồng nhất hoa/thường của đơn vị. Cùng món ở nhiều ngày được cộng đủ số lần. `recipeCount` đếm RecipeID khác nhau, `plannedItemCount` đếm mục lịch sử dụng nguyên liệu đó; `recipes` là các món khác nhau liên quan.
+
+Chỉ tính `IsRequired = 1`; optional không nằm trong tổng mặc định. Không trừ `UserIngredients`, không khẳng định có đủ lượng tại nhà, không sửa công thức gốc. Checkbox Đã mua thuộc state tạm frontend và không có endpoint ghi trạng thái mua trong phạm vi này. Chi tiết tại [SHOPPING_LIST.md](SHOPPING_LIST.md).
+
+### Lỗi và tương thích
+
+| Mã | Tình huống |
+| --- | --- |
+| 400 | Ngày/tuần/bữa/khẩu phần/ID sai, trường thừa, mutation query, JSON/Content-Type không hợp lệ, dữ liệu FK vừa đổi |
+| 401 | Guest, JWT sai/hết hạn, phiên đã thu hồi hoặc tài khoản không còn |
+| 403 | Origin hoặc CSRF thiếu/sai trong mutation |
+| 404 | Recipe không tồn tại khi thêm; item không tồn tại hoặc không thuộc tài khoản khi sửa/xóa |
+| 409 | Recipe đã có ở bữa/ngày đích; xung đột concurrent chưa giải quyết sau retry |
+| 500/503/504 | Lỗi nội bộ/kết nối/timeout được che bởi error handler chung |
+
+Pantry API `/api/pantry` tiếp tục hoạt động với ownership cũ và bảng UserIngredients giữ nguyên; không có chuyển dữ liệu Pantry sang MealPlans. Giao diện tương thích tại `/legacy-pantry`; `/pantry` redirect replace sang `/meal-planner`, không phải đổi tên hoặc xóa API. Admin DELETE Recipe kiểm tra thêm MealPlanItems và trả409 với thông báo món đang dùng trong lịch. FK mới đều NO ACTION; không CASCADE.
+
+Migration 001 đã được áp dụng trên môi trường dự án ngày 27/10/2026, schema hiện có 12 bảng; không chạy lại trong lượt hoàn thiện ngày 28/10. Hướng dẫn cài mới/nâng cấp tại [MEAL_PLANNER_DATABASE.md](MEAL_PLANNER_DATABASE.md); kết quả test chức năng mới và các giới hạn Not Tested tại [MEAL_PLANNER_VERIFICATION.md](MEAL_PLANNER_VERIFICATION.md). Số Passed ở báo cáo cũ không thay thế kết quả Meal Planner.

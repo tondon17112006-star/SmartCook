@@ -109,6 +109,27 @@
 - SQL Server mã hóa,20 món mẫu và hash/số dòng10 bảng giữ nguyên qua rollback. Không migration, không đổi secrets/schema, không tạo/nâng quyền Admin hoặc commit/push. Fixture Admin chỉ trên DTO test, Role SQL vẫn User.
 - Tài liệu README/API/ADMIN_* và báo cáo `docs/STEP10_VERIFICATION.md` đã chốt. Còn nghiệm thu browser trực quan/responsive/HTTPS, đăng nhập Admin SQL thật khi có tài khoản được phép và kiểm thử tải nhiều kết nối; các phần này không được đánh dấu Passed.
 
+## Bước 11 — Kiểm thử tổng thể
+
+**Hoàn thành trong phạm vi tự động, SQL integrity, light performance và browser smoke read-only ngày 23/10/2026.** Không thực hiện Bước 12.
+
+- Frontend lint/build, 188 unit/DOM và 13 integration đều đạt; Backend 161 unit/HTTP/security và 197 integration đều đạt.
+- Database integrity kiểm tra 10 bảng, PK/FK/UNIQUE/CHECK, DBCC, recipe structure, `verify.sql` và một aggregate fixture rollback; mọi snapshot dữ liệu giữ nguyên. `check:db` xác nhận SmartCookDB mã hóa với 20 recipes; không có User/Admin thật hay dữ liệu test còn lại.
+- Đã đo tải nhẹ tuần tự, có warm-up và 5 mẫu/endpoint cho health, health/db, catalog, recipes, detail và suggestions; đây không phải load test hay SLA production.
+- `npm ls` và audit full/production của Client/Server đều trả 0 advisory ở lần chạy cuối. Browser smoke đã xác nhận không overflow ngang ở 375/768/1024/1440px cho Home, Recipes, Detail và Ingredient Finder; guard Guest đến Favorites/Pantry/Admin chuyển đúng về Login.
+- Báo cáo đầy đủ: `docs/STEP11_TEST_REPORT.md`, dependency: `docs/STEP11_DEPENDENCIES.md`, checklist: `docs/STEP11_MANUAL_CHECKLIST.md`. Còn browser write/admin/keyboard đầy đủ, HTTPS thật, production load/multi-instance và tối ưu hero image là giới hạn phải nghiệm thu riêng.
+
+## Bước 12 — Hoàn thiện bàn giao đồ án
+
+**Hoàn thành trong phạm vi bàn giao ngày 23/10/2026.** Rà soát source, routes, schema, seed/verify, API/Auth, Git hygiene và bằng chứng Bước 10–11 không phát hiện lỗi runtime/UI/security có căn cứ để thay đổi logic. Giữ nguyên frontend/backend/auth/schema/seed/dependencies; chỉ chuẩn hóa tài liệu bàn giao và chạy lại kiểm thử cuối.
+
+- Tạo tài liệu: INSTALLATION.md, PROJECT_OVERVIEW.md, REQUIREMENTS.md, SYSTEM_ARCHITECTURE.md, USE_CASE.md, API_DOCUMENTATION.md, TEST_SUMMARY.md, DEMO_SCRIPT.md, GITHUB_WORKFLOW.md, FINAL_PROJECT_REPORT.md; cập nhật README và DATABASE_DESIGN.md.
+- Frontend lint/build pass; unit/DOM **188/188** và integration **13/13** pass.
+- Backend unit/HTTP/security **161/161** và integration **197/197** pass. Database integrity **8/8** là một phần của integration; check:db xác nhận SmartCookDB, 20 recipes, Shared memory, encrypted TRUE.
+- npm ls và audit full/production ở Client/Server đều exit 0, **0 advisory**. Không dùng audit fix, không đổi package hoặc lockfile.
+- Browser smoke read-only Bước 11 là evidence trực quan hiện có. Browser write/admin/keyboard/screen reader/HTTPS/load production không được đánh dấu Passed và phải nghiệm thu riêng.
+- Không commit/push/chuyển branch, không tạo/nâng quyền Admin, không sửa .env thật hoặc xóa/reset database. Git hiện còn các thay đổi Bước 11 và Bước 12 chưa commit để chủ dự án review.
+
 ## Phần tương lai — Hoàn thiện và triển khai
 
 - Kiểm thử nghiệp vụ, phân quyền, tính định lượng và thuật toán gợi ý.
@@ -117,4 +138,28 @@
 - Tài liệu vận hành, sao lưu/khôi phục SQL Server và dữ liệu thử nghiệm.
 - Nghiệm thu đầy đủ theo ba nhóm Khách, Người dùng và Admin.
 
-Bước1–10 hoàn thành phần lập trình và kiểm thử tự động theo phạm vi tương ứng, với giới hạn nghiệm thu ghi trong báo cáo. Chưa thực hiện Bước11 hoặc triển khai production.
+Bước1–12 hoàn thành phần lập trình, kiểm thử và bàn giao theo phạm vi tương ứng, với giới hạn nghiệm thu ghi trong báo cáo. Chưa triển khai production.
+
+## Thay đổi sau bàn giao — Meal Planner và Shopping List
+
+Chốt phần lập trình, tích hợp và kiểm thử tự động ngày **28/10/2026**, tiếp tục trên nhánh `feature/weekly-meal-planner`. Giữ nguyên các thay đổi/tài liệu có sẵn; không commit, push hoặc tự chuyển nhánh. Số test trong các mục Bước 1–12 ở trên là lịch sử; kết quả thay đổi mới được ghi riêng dưới đây và tại [MEAL_PLANNER_VERIFICATION.md](docs/MEAL_PLANNER_VERIFICATION.md).
+
+| Giai đoạn | Trạng thái đã xác minh | Giới hạn / bảo toàn |
+| --- | --- | --- |
+| MP-01 — Rà soát | Đã hoàn thành | Không thực hiện lại từ đầu; đối chiếu source thực tế khi tiếp tục |
+| MP-02 — Database | Migration `001_weekly_meal_planner.sql` đã chạy ngày 27/10; đã chạy lại để xác nhận idempotent; SmartCookDB có 12 bảng | Chỉ kiểm tra cấu trúc bằng truy vấn đọc; không chạy lại migration nếu hợp đồng đã đúng |
+| MP-03 — Backend | Hoàn thành; đủ 5 API, validation, ownership, chuyển tuần, transaction/retry/rollback; 29 unit/HTTP mới và 18 SQL mới đạt trong bộ chạy cuối | Không chạy lại migration; fixture SQL rollback, không tạo/nâng quyền Admin thật; chưa stress nhiều kết nối SQL độc lập |
+| MP-04 — Frontend | Hoàn thành chức năng và kiểm thử tự động: lịch 7 ngày/3 bữa, nhiều món/bữa, tìm recipe/Favorites, dialog CRUD, điều hướng tuần/reload, bảo vệ phiên; luồng App → HTTP → SQL đạt | Layout, responsive, thao tác chuột/bàn phím browser thật vẫn Not Tested |
+| MP-05 — Shopping List | Hoàn thành chức năng và kiểm thử tự động; SQL thật đối chiếu nhiều khẩu phần/đơn vị, cùng món nhiều ngày, optional, cập nhật sau CRUD; checkbox/sao chép/fallback có DOM test | Checkbox chỉ lưu trong bộ nhớ; không đổi đơn vị/trừ Pantry; clipboard permission browser thật chưa nghiệm thu |
+| MP-06 — Tích hợp | Hoàn thành; Navbar Lịch nấu ăn, `/pantry` redirect replace, `/legacy-pantry` giữ UI cũ; RecipeDetail/Cooking Mode/selector Favorites/rule Admin được kiểm thử qua React → HTTP → SQL | API `/api/pantry`, UserIngredients, Favorites/Reviews và Suggestions giữ nguyên; không di chuyển dữ liệu Pantry |
+| MP-07 — Hồi quy/tài liệu | Hoàn thành hồi quy tự động và tài liệu: lint/build đạt; Frontend 212 unit/DOM + 14 integration; Backend 190 unit/HTTP + 215 integration; tổng 631 đạt, 0 thất bại, 0 bỏ qua | Browser 375/768/1024/1440px Not Tested vì Computer Use không xác định được URL Chrome để thực thi policy; checklist và giới hạn ở báo cáo kiểm chứng |
+
+Hai bảng bổ sung là `MealPlans` và `MealPlanItems`, không có lịch seed. Bảng `UserIngredients`, API `/api/pantry`, Favorites, Reviews, Recipes và thuật toán Suggestions được giữ nguyên. Snapshot ban đầu của đợt thay đổi ghi nhận **1 Users, 1 Favorites, 0 UserIngredients, 20 Recipes**; không suy diễn mọi bảng cá nhân đang rỗng từ số liệu seed lịch sử.
+
+Shopping List chỉ tổng hợp nguyên liệu bắt buộc, gộp theo IngredientID và **đơn vị đúng chuỗi**, tính phân số chính xác từ SQL DECIMAL, chỉ làm tròn lên một lần ở tổng cuối tới tối đa 6 chữ số thập phân khi trả chuỗi số. Không quy đổi đơn vị hoặc trừ Pantry. Checkbox đã mua là state tạm, không thay thế dữ liệu lịch trong SQL Server.
+
+`check:db` xác nhận SmartCookDB có 20 món, mã hóa TRUE và Shared memory; 8 database-integrity case và 18 Meal Planner SQL case là một phần của 215 backend integration, không cộng lại vào tổng. Sau toàn bộ test, hash/count và metadata cột 10 bảng cũ khớp baseline; `.env`, schema, seed và các tệp auth/Pantry/Suggestions được bảo vệ trong snapshot giữ nguyên. MealPlans/MealPlanItems vẫn 0 dòng, không còn dữ liệu fixture. Baseline Users1/Favorites1 được giữ nguyên, không thay dữ liệu cá nhân để ép khớp số seed.
+
+Các lỗi được sửa trong lượt hoàn thiện gồm điều hướng Tuần này qua thời điểm nửa đêm Việt Nam, assertion DOM tạo diff React rất lớn làm test chờ kéo dài, và hai kỳ vọng Navbar Pantry cũ trong integration. Không xóa kiểm thử hoặc tăng timeout để che lỗi; bộ chạy cuối đạt toàn bộ.
+
+MP-04/05/06 hoàn thành phần chức năng và tự động; MP-07 hoàn thành hồi quy/tài liệu trong phạm vi đã chạy. Chưa nghiệm thu trực quan/browser write ở 375/768/1024/1440px, production HTTPS/multi-instance hoặc stress race nhiều kết nối SQL độc lập. Không suy các phần này là Passed từ DOM/HTTP/SQL; tiếp tục checklist thủ công trong báo cáo khi có môi trường phù hợp. Không triển khai tính năng khác.

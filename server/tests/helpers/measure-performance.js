@@ -53,7 +53,7 @@ try {
   const recipeId = recipes.data.find((row) => row.recipeName === 'Trứng chiên')?.recipeId;
   assert.ok(recipeId);
   const cases = [
-    ['/health'], ['/categories'], ['/ingredients?search=' + encodeURIComponent('Trứng') + '&limit=20'],
+    ['/health'], ['/health/db'], ['/categories'], ['/ingredients?search=' + encodeURIComponent('Trứng') + '&limit=20'],
     ['/recipes?limit=12'], [`/recipes/${recipeId}`], [`/recipes/${recipeId}/reviews`], ['/recipes/suggest', body],
   ];
   for (const [path, payload] of cases) await measure(path, () => publicRequest(path, payload));

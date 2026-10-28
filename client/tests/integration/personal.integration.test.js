@@ -91,6 +91,12 @@ test('live React favorites, reviews and pantry persist in SQL and isolate accoun
       root = createRoot(document.getElementById('root'))
       await act(async () => root.render(React.createElement(App)))
     }
+    async function navigate(path) {
+      await act(async () => {
+        window.history.pushState(null, '', path)
+        window.dispatchEvent(new dom.window.PopStateEvent('popstate'))
+      })
+    }
     async function click(element) {
       assert.ok(element, 'Expected a visible action in the rendered App')
       await act(async () => element.click())
@@ -254,7 +260,9 @@ test('live React favorites, reviews and pantry persist in SQL and isolate accoun
         assert.equal(pantryForm()?.querySelector('button[type="submit"]')?.disabled, false)
       })
     }
-    await mount('/pantry', fixture.userA.cookies)
+    // Pantry is retained as a protected compatibility page after its main
+    // navigation entry moves to Meal Planner; its API/data tests stay intact.
+    await mount('/legacy-pantry', fixture.userA.cookies)
     await waitFor(() => {
       assert.match(mainText(), /Tủ nguyên liệu đang trống/u)
       assert.ok(pantryForm())
@@ -283,12 +291,12 @@ test('live React favorites, reviews and pantry persist in SQL and isolate accoun
     assert.deepEqual([eggPantry.quantity, eggPantry.unit, eggPantry.expiryDate], [1.25, 'kg', fresh], 'SQL stores the explicit unit without guessing a conversion')
     assert.equal(persisted.find((item) => item.ingredientId === selectedIds[1]).expiryDate, null)
     assert.equal((await fixture.userB.send('/api/pantry')).body.data.length, 0)
-    await mount('/pantry', fixture.userA.cookies)
+    await mount('/legacy-pantry', fixture.userA.cookies)
     await waitFor(() => {
       assert.match(pantryRow('Trứng gà')?.textContent || '', /1,25 kg/u)
       assert.ok(pantryForm())
     })
-    await mount('/pantry', fixture.userB.cookies)
+    await mount('/legacy-pantry', fixture.userB.cookies)
     await waitFor(() => assert.match(mainText(), /Tủ nguyên liệu đang trống/u))
     assert.equal(pantryRow('Trứng gà'), undefined)
 
@@ -297,11 +305,13 @@ test('live React favorites, reviews and pantry persist in SQL and isolate accoun
     await mount('/ingredients', fixture.userA.cookies)
     await waitFor(() => assert.ok(document.querySelector('main select')))
     await chooseSelect(document.querySelector('main select'), 4)
-    const pantryLink = document.querySelector('header a[href="/pantry"]')
-    assert.ok(pantryLink, 'The account navigation exposes the personal pantry')
-    await click(pantryLink)
+    assert.ok(document.querySelector('header a[href="/meal-planner"]'), 'The account navigation exposes Meal Planner')
+    assert.equal(Boolean(document.querySelector('header a[href="/pantry"]')), false)
+    // The old Pantry remains reachable by its explicit compatibility URL.
+    // Navigate in the same App so the selected servings context stays intact.
+    await navigate('/legacy-pantry')
     await waitFor(() => {
-      assert.equal(window.location.pathname, '/pantry')
+      assert.equal(window.location.pathname, '/legacy-pantry')
       assert.ok(pantryRow('Trứng gà'))
       assert.equal(textButton('Nấu ăn từ tủ nguyên liệu')?.disabled, false)
       assert.match(mainText(), /Tìm món cho 4 người/u)
@@ -324,7 +334,7 @@ test('live React favorites, reviews and pantry persist in SQL and isolate accoun
     const summaryNames = [...document.querySelectorAll('ul[aria-label="Nguyên liệu đã chọn"] li')].map((item) => item.textContent)
     assert.deepEqual(summaryNames.sort(), [...selectedNames].sort())
     assert.equal(pantrySuggestions[0].body.ingredientIds.includes(selectedIds[1]), true, 'A pantry ingredient without an expiry is used')
-    await click(document.querySelector('header a[href="/pantry"]'))
+    await navigate('/legacy-pantry')
     await waitFor(() => assert.ok(pantryRow(expiredIngredient.ingredientName)))
     const pantryDeletesBeforeConfirm = calls.filter(({ path, method }) => path.startsWith('/pantry/') && method === 'delete').length
     await click(namedAction(`Xóa ${expiredIngredient.ingredientName}`))

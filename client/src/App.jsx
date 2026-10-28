@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout.jsx'
 import HomePage from './pages/HomePage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
@@ -7,6 +7,7 @@ import RecipesPage from './pages/RecipesPage.jsx'
 import RecipeDetailPage from './pages/RecipeDetailPage.jsx'
 import Favorites from './pages/Favorites.jsx'
 import MyPantry from './pages/MyPantry.jsx'
+import MealPlanner from './pages/MealPlanner.jsx'
 import FavoriteProvider from './context/FavoriteProvider.jsx'
 import IngredientFinder from './pages/IngredientFinder.jsx'
 import Suggestions from './pages/Suggestions.jsx'
@@ -43,7 +44,8 @@ export default function App() {
           <Route path="ingredients" element={<IngredientFinder />} />
           <Route path="suggestions" element={<Suggestions />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="pantry" element={<MyPantry />} />
+            <Route path="pantry" element={<Navigate to="/meal-planner" replace />} />
+            <Route path="legacy-pantry" element={<MyPantry />} />
           </Route>
         </Route>
         <Route path="login" element={<LoginPage />} />
@@ -51,6 +53,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="favorites" element={<Favorites />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="meal-planner" element={<MealPlanner />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

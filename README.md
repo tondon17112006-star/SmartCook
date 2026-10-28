@@ -1,6 +1,22 @@
 # SmartCook
 
-Website hướng dẫn nấu ăn dựa trên nguyên liệu có sẵn. Toàn bộ giao diện sử dụng tiếng Việt. Bước1–10 đã hoàn thành phần lập trình và kiểm thử tự động: khám phá/gợi ý công thức, Cooking Mode, xác thực, cá nhân hóa và khu vực quản trị. **Bước10 được kiểm chứng ngày23/10/2026: 538 bài kiểm thử đạt, lint/build sạch.** Chưa nghiệm thu trực quan bằng browser hoặc đăng nhập Admin SQL thật; xem [STEP10_VERIFICATION.md](docs/STEP10_VERIFICATION.md).
+Website hướng dẫn nấu ăn dựa trên nguyên liệu có sẵn. Toàn bộ giao diện sử dụng tiếng Việt. Bước1–12 đã hoàn thành theo phạm vi đồ án: khám phá/gợi ý công thức, Cooking Mode, xác thực, cá nhân hóa, khu vực quản trị, database integrity, browser smoke read-only và tài liệu bàn giao. Lượt chốt Bước 12 ngày 23/10/2026: lint/build pass; 188 unit/DOM + 13 integration ở frontend; 161 unit/HTTP/security + 197 integration ở backend; check-db xác nhận SmartCookDB mã hóa với 20 công thức. Xem [tổng kết kiểm thử](docs/TEST_SUMMARY.md) để biết bằng chứng và giới hạn nghiệm thu.
+
+**Hoàn thiện Meal Planner ngày 28/10/2026:** Lịch nấu ăn 7 ngày tại `/meal-planner` và Danh sách đi chợ đã hoàn thành chức năng, tích hợp và kiểm thử tự động. Frontend lint/build đạt, **212 unit/DOM + 14 integration** đạt; Backend **190 unit/HTTP + 215 integration** đạt, tổng **631 đạt, 0 thất bại, 0 bỏ qua**. Migration 001 đã chạy ngày 27/10, SmartCookDB hiện có **12 bảng**; lượt này không chạy lại migration. Hash/count 10 bảng cũ, cấu hình và dữ liệu Pantry được bảo toàn. **Browser trực quan 375/768/1024/1440px và stress nhiều kết nối SQL độc lập vẫn Not Tested**. Xem [kết quả và giới hạn Meal Planner](docs/MEAL_PLANNER_VERIFICATION.md).
+
+## Mục tiêu và phạm vi
+
+SmartCook giúp Guest tìm món từ nguyên liệu có sẵn, xem nguyên liệu thiếu và theo dõi quy trình nấu. User có thêm profile, Favorites, Reviews, lịch nấu ăn theo tuần và danh sách nguyên liệu cần mua; Pantry cũ được duy trì để tương thích dữ liệu/API. Admin đã được cấp quyền có thể quản trị catalog/nội dung. Ứng dụng không tự quy đổi đơn vị, khẳng định đủ lượng tại nhà hoặc triển khai hạ tầng production. Xem [tổng quan dự án](docs/PROJECT_OVERVIEW.md), [yêu cầu hệ thống](docs/REQUIREMENTS.md) và [hướng dẫn Meal Planner](docs/MEAL_PLANNER.md).
+
+## Phân quyền
+
+| Vai trò | Khả năng |
+| --- | --- |
+| Guest | Xem/tìm/lọc công thức, chọn nguyên liệu, xem gợi ý/đánh giá và đăng ký/đăng nhập |
+| User | Profile, Favorites, Reviews, Meal Planner và Shopping List của chính mình; Pantry tương thích vẫn được giữ |
+| Admin | Dashboard, quản lý công thức/danh mục/nguyên liệu, xem Users và quản lý Reviews |
+
+Phân quyền được kiểm tra ở Express bằng role hiện thời từ SQL Server; guard frontend không thay thế kiểm tra server. Không có Admin mặc định.
 
 ## Công nghệ
 
@@ -49,7 +65,7 @@ SmartCook/
 └── README.md
 ```
 
-Thư mục `SmartCook` hiện tại là gốc dự án, đã có Git repository riêng. Không tạo thêm thư mục `SmartCook` bên trong. Chưa tạo commit hoặc cấu hình Git toàn cục.
+Thư mục `SmartCook` hiện tại là gốc dự án, đã có Git repository riêng. Không tạo thêm thư mục `SmartCook` bên trong. Đợt Meal Planner tiếp tục trên nhánh `feature/weekly-meal-planner`, giữ các thay đổi chưa commit để chủ dự án review; không commit, push, đổi nhánh hoặc sửa cấu hình Git toàn cục.
 
 ## Chạy môi trường phát triển trên Windows
 
@@ -100,6 +116,8 @@ Mỗi ứng dụng có mẫu riêng: [client/.env.example](client/.env.example) 
 - `DB_CONNECTION_TIMEOUT=10000`, `DB_REQUEST_TIMEOUT=15000` tính bằng ms; `DB_POOL_MAX=10` giới hạn pool. Khi đổi môi trường, khởi động lại Backend.
 - Khi dùng TCP, cấu hình `DB_SERVER` và `DB_PORT` theo instance thực tế; không đặt `DB_PORT` khi server đã gồm cổng/instance hoặc dùng `lpc:`. Chưa hỗ trợ SQL Login trong cấu hình Bước 3; không cần `DB_USER`/`DB_PASSWORD`.
 - Script SQL chạy bằng SSMS hoặc tiện ích PowerShell riêng, không đọc `.env`. Không đưa `.env`, mật khẩu hoặc dữ liệu SQL Server lên Git.
+
+Máy mới phải chạy **`database/schema.sql` → `database/migrations/001_weekly_meal_planner.sql` → `database/seed.sql` → `database/verify.sql`**. Schema nền không tự tạo hai bảng Meal Planner. Máy hiện tại đã áp migration và kiểm chứng chạy lại ngày 27/10; khi cấu trúc đã đúng chỉ cần verify, không chạy lại migration theo thói quen. Migration chỉ bổ sung hai bảng, không chuyển Pantry sang lịch. Xem [hướng dẫn cài đặt](docs/INSTALLATION.md) và [database](database/README.md).
 
 Tailwind được tích hợp qua plugin Vite theo [hướng dẫn chính thức](https://tailwindcss.com/docs/installation/using-vite).
 
@@ -211,7 +229,8 @@ Xem [thuật toán và giới hạn](docs/SUGGESTION_ALGORITHM.md) cùng [báo c
 - `/profile`: hồ sơ có ProtectedRoute, sửa họ tên/số điện thoại; email/vai trò chỉ đọc.
 - `/admin`: layout quản trị riêng và Dashboard dùng SQL thật; quản lý recipes/categories/ingredients, xem users và quản lý reviews. Mọi API yêu cầu Role Admin thực tế; xem [hướng dẫn quản trị](docs/ADMIN_DASHBOARD.md).
 - `/favorites`: bộ sưu tập SQL riêng, thêm/bỏ bằng trái tim, đồng bộ trạng thái và phân trang.
-- `/pantry`: tủ nguyên liệu SQL riêng, số lượng/đơn vị/hạn dùng và nút nấu từ tủ.
+- `/meal-planner`: lịch riêng 7 ngày/3 bữa, nhiều món mỗi bữa, khẩu phần 1–20 và Shopping List tại `#shopping-list`.
+- `/pantry`: chuyển hướng replace sang `/meal-planner` sau kiểm thử luồng lịch mới; `/legacy-pantry` giữ giao diện Pantry tương thích, API và dữ liệu UserIngredients.
 - `/recipes/:id`: bổ sung đánh giá công khai, điểm trung bình và form thêm/sửa/xóa đánh giá của mình.
 - Đường dẫn không tồn tại có trang 404.
 
@@ -265,11 +284,26 @@ Chi tiết tại [RECIPE_DETAIL.md](docs/RECIPE_DETAIL.md) và [COOKING_MODE.md]
 - [Món ăn yêu thích Bước 9](docs/FAVORITES.md).
 - [Đánh giá và bình luận Bước 9](docs/REVIEWS.md).
 - [Tủ nguyên liệu cá nhân và gợi ý](docs/MY_PANTRY.md).
+- [Lịch nấu ăn 7 ngày](docs/MEAL_PLANNER.md).
+- [Danh sách đi chợ và định lượng](docs/SHOPPING_LIST.md).
+- [Database và migration Meal Planner](docs/MEAL_PLANNER_DATABASE.md).
+- [Kiểm chứng và checkpoint Meal Planner](docs/MEAL_PLANNER_VERIFICATION.md).
 - [Kiểm chứng và danh sách file Bước 9](docs/STEP9_VERIFICATION.md).
 - [Admin Dashboard và các route quản trị](docs/ADMIN_DASHBOARD.md).
 - [Thêm/sửa công thức và quy tắc xóa](docs/ADMIN_RECIPES.md).
 - [Bảo mật và chuẩn bị tài khoản Admin](docs/ADMIN_SECURITY.md).
 - [Kết quả kiểm thử và danh sách file Bước10](docs/STEP10_VERIFICATION.md).
+- [Báo cáo kiểm thử tổng thể Bước 11](docs/STEP11_TEST_REPORT.md).
+- [Hướng dẫn cài đặt máy mới](docs/INSTALLATION.md).
+- [Tổng quan dự án](docs/PROJECT_OVERVIEW.md).
+- [Yêu cầu chức năng và phi chức năng](docs/REQUIREMENTS.md).
+- [Kiến trúc hệ thống](docs/SYSTEM_ARCHITECTURE.md).
+- [Use case](docs/USE_CASE.md).
+- [Tài liệu API bàn giao](docs/API_DOCUMENTATION.md).
+- [Tổng kết kiểm thử](docs/TEST_SUMMARY.md).
+- [Kịch bản demo](docs/DEMO_SCRIPT.md).
+- [GitHub workflow](docs/GITHUB_WORKFLOW.md).
+- [Báo cáo hoàn thành dự án](docs/FINAL_PROJECT_REPORT.md).
 
 ## Chạy thử đăng nhập — Bước 8
 
@@ -284,10 +318,22 @@ Phiên hết sau 15 phút, không gia hạn ngầm. Khởi động lại Backend
 
 1. Đăng nhập ở `http://127.0.0.1:5173`. Nhấn trái tim trên món, mở **Món yêu thích**, tải lại để kiểm tra lưu SQL; bỏ lưu tại đây có xác nhận. Khách nhấn trái tim được chuyển login, không tự ghi yêu thích.
 2. Mở một công thức, kéo đến **Đánh giá món ăn**. Chọn 1–5 sao, nhập bình luận tùy chọn; gửi rồi thử sửa/xóa đánh giá của mình. Khách xem được đánh giá và điểm trung bình, không có form ghi.
-3. Mở **Tủ nguyên liệu**, tìm nguyên liệu thật trong danh mục, thêm lượng/đơn vị và hạn dùng nếu biết. Thử chỉnh sửa, tải lại và xóa có xác nhận. Không cần nhập ngày giả khi chưa biết hạn.
+3. Để kiểm tra Pantry tương thích, mở trực tiếp **`/legacy-pantry`**, tìm nguyên liệu thật trong danh mục, thêm lượng/đơn vị và hạn dùng nếu biết. Thử chỉnh sửa, tải lại và xóa có xác nhận. Không cần nhập ngày giả khi chưa biết hạn.
 4. Chọn khẩu phần tại tủ, nhấn **Nấu ăn từ tủ nguyên liệu**. Hàng hết hạn bị loại, hàng chưa ghi hạn được chọn với nhắc kiểm tra chất lượng. Kết quả gợi ý giữ khẩu phần; `ready` chỉ đủ loại bắt buộc, chưa xác nhận đủ lượng.
 
-Database hiện đủ ràng buộc chống trùng, **không cần migration**. Các test ghi dữ liệu dùng transaction rollback; dữ liệu món ăn và Ingredients dùng chung không đổi. Chạy kiểm tra tại từng thư mục bằng `npm test` và `npm run test:integration`; Frontend thêm `npm run lint` và `npm run build`. Integration Frontend cần Backend chạy và dependencies của cả hai ứng dụng; các bài SQL được chạy tuần tự. Chi tiết kết quả và phần chưa kiểm chứng trực quan ở báo cáo Bước 9.
+Bước 9 trước đây không cần migration cho Pantry. Phần Meal Planner mới dùng migration 001 bổ sung; không đổi ràng buộc hoặc dữ liệu Pantry cũ. Các test ghi dữ liệu dùng transaction rollback; dữ liệu món ăn và Ingredients dùng chung được bảo toàn. Chạy kiểm tra tại từng thư mục bằng `npm test` và `npm run test:integration`; Frontend thêm `npm run lint` và `npm run build`. Integration Frontend cần Backend chạy và dependencies của cả hai ứng dụng; các bài SQL chạy tuần tự. Số liệu Bước 9/Bước 10 ở dưới là lịch sử; kết quả thay đổi mới nằm ở báo cáo Meal Planner.
+
+## Chạy thử Lịch nấu ăn và Danh sách đi chợ
+
+1. Khởi động SQL Server, Backend và Frontend như trên; đăng nhập rồi mở `http://127.0.0.1:5173/meal-planner`. Chỉ được xem/sửa lịch của tài khoản hiện tại.
+2. Chọn Tuần trước/Tuần này/Tuần sau. Lịch luôn từ thứ Hai đến Chủ nhật; Hôm nay dùng ngày Việt Nam. Tải lại giữ tuần trong query `weekStart` và đọc lại dữ liệu SQL.
+3. Chọn Thêm món ở một bữa, tìm/lọc công thức thật hoặc chọn Món yêu thích, nhập khẩu phần1–20 rồi Thêm vào lịch. Mỗi bữa có nhiều món; cùng recipe chỉ có một lần trong cùng bữa/ngày.
+4. Sửa ngày, bữa hoặc khẩu phần; chuyển ngày sang tuần khác sẽ chuyển mục sang lịch đích cùng tài khoản. Xóa cần xác nhận và chỉ xóa MealPlanItem.
+5. Shopping List tổng hợp nguyên liệu bắt buộc bằng `Quantity × PlannedServings / Recipes.Servings`, gộp cùng IngredientID + đúng Unit, không đổi đơn vị hoặc trừ Pantry. `totalQuantity` là chuỗi decimal, chỉ làm tròn lên một lần ở tổng cuối tới tối đa 6 chữ số thập phân; optional không nằm trong tổng.
+6. Đánh dấu Đã mua chỉ lưu tạm; đổi tuần, cập nhật lịch, reload hoặc đổi phiên sẽ đặt lại. Nút Sao chép báo thành công sau Clipboard API; nếu không có quyền, dùng ô nội dung được chọn để sao chép thủ công.
+7. Từ card mở Xem công thức hoặc Bắt đầu nấu, giữ khẩu phần đã chọn. RecipeDetail có nút thêm vào lịch; Favorites/Reviews và tiến độ Cooking Mode không bị xóa.
+
+Các endpoint mới nằm trong [API.md](docs/API.md). Admin không được xóa recipe có MealPlanItems, Favorites hoặc Reviews tham chiếu; các FK mới vẫn NO ACTION. Không có tài khoản Admin hoặc lịch mẫu tự động. Kết quả kiểm thử thực tế và những phần browser chưa xác minh tại [MEAL_PLANNER_VERIFICATION.md](docs/MEAL_PLANNER_VERIFICATION.md).
 
 ## Chạy thử quản trị — Bước10
 

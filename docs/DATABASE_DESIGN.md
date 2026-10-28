@@ -1,11 +1,19 @@
 # Thiết kế cơ sở dữ liệu SmartCook
 
-`SmartCookDB` lưu công thức, nguyên liệu và dữ liệu cá nhân hóa bằng **Microsoft SQL Server**. Bước 2 tạo schema, seed và tài liệu; chưa xây API nghiệp vụ, giao diện tài khoản/quản trị hoặc thuật toán gợi ý. Express hiện tại vẫn giữ endpoint kiểm tra trạng thái, không bắt buộc SQL Server để khởi động.
+## Trạng thái xác minh tại bàn giao
 
-- Script cấu trúc: [database/schema.sql](../database/schema.sql).
+Schema nền trong `schema.sql` gồm 10 bảng, 12 FK, 7 UNIQUE, 32 CHECK và 8 DEFAULT. Sau thay đổi Meal Planner, migration `001_weekly_meal_planner.sql` đã được áp dụng ngày27/10/2026; SmartCookDB hiện có **12 bảng**, gồm thêm MealPlans và MealPlanItems. Hợp đồng đầy đủ có 12 PK, 9 UNIQUE, 15 FK, 39 CHECK, 13 DEFAULT và 10 index nonclustered khai báo riêng (31 index khi tính PK/UNIQUE).
+
+Các phần bảng1–10 bên dưới vẫn mô tả schema nền và dữ liệu Pantry được giữ lại. Hai bảng mới được mô tả ở mục Meal Planner và [MEAL_PLANNER_DATABASE.md](MEAL_PLANNER_DATABASE.md). Kết quả Bước11–12 là lịch sử; kết quả của migration/chức năng mới nằm tại [MEAL_PLANNER_VERIFICATION.md](MEAL_PLANNER_VERIFICATION.md).
+
+Sơ đồ ER nền nằm tại [ERD.md](ERD.md); quan hệ Meal Planner bổ sung ở cuối tài liệu này. Hướng dẫn cài đặt/run script tại [INSTALLATION.md](INSTALLATION.md). Database không có Admin mặc định.
+
+`SmartCookDB` lưu công thức, nguyên liệu và dữ liệu cá nhân hóa bằng **Microsoft SQL Server**. Các phần bảng nền giữ thiết kế của Bước 2; API nghiệp vụ, xác thực, quản trị, gợi ý và Meal Planner đã được bổ sung ở những giai đoạn sau. Express vẫn giữ endpoint kiểm tra trạng thái độc lập SQL Server để có thể khởi động và báo health khi database chưa kết nối.
+
+- Script cấu trúc nền: [database/schema.sql](../database/schema.sql); sau đó chạy [migration Meal Planner](../database/migrations/001_weekly_meal_planner.sql) cho máy mới.
 - Dữ liệu mẫu: [database/seed.sql](../database/seed.sql).
 - Cách cấu hình, chạy và kiểm tra: [database/README.md](../database/README.md).
-- Sơ đồ đầy đủ 10 bảng: [ERD.md](ERD.md).
+- Sơ đồ schema nền 10 bảng: [ERD.md](ERD.md); quan hệ hai bảng mới được bổ sung ở mục dưới.
 
 ## Quy ước chung
 
@@ -160,6 +168,26 @@ Một dòng biểu diễn tổng nguyên liệu người dùng đang có; chưa 
 Tài khoản có thể tìm lại cùng một từ khóa nhiều lần; không áp UNIQUE cho từ khóa. Khách chưa đăng nhập vẫn dùng chức năng tìm kiếm ở giai đoạn sau, nhưng bảng này chỉ lưu các lần tìm kiếm có tài khoản. Bảng chưa lưu danh sách nguyên liệu có cấu trúc hoặc toàn bộ bộ lọc của phiên tìm kiếm.
 
 ## Chỉ mục và quan hệ
+
+### Bảng 11–12 — Meal Planner
+
+| Bảng | Cột chính và ràng buộc |
+| --- | --- |
+| MealPlans | MealPlanID INT IDENTITY PK; UserID FK Users; WeekStartDate DATE là thứ Hai; CreatedAt/UpdatedAt DATETIME2(0) UTC; UNIQUE(UserID,WeekStartDate) |
+| MealPlanItems | MealPlanItemID INT IDENTITY PK; MealPlanID FK MealPlans; RecipeID FK Recipes; MealDate DATE; MealType Breakfast/Lunch/Dinner; Servings INT1–20; SortOrder không âm; timestamp UTC; UNIQUE(MealPlanID,MealDate,MealType,RecipeID) |
+
+Một User có tối đa một MealPlan mỗi tuần; một kế hoạch có nhiều mục món. Một bữa chứa nhiều recipe và một recipe dùng được ở nhiều bữa/ngày. Backend kiểm tra ngày item thuộc tuần trong transaction; không có trigger tự chuyển ngày. Không lưu bản sao tên/nguyên liệu công thức trong lịch.
+
+```mermaid
+erDiagram
+  Users ||--o{ MealPlans : "sở hữu"
+  MealPlans ||--o{ MealPlanItems : "chứa"
+  Recipes ||--o{ MealPlanItems : "được lên lịch"
+```
+
+Hai index mới hỗ trợ tải lịch theo MealPlanID/MealDate/MealType/SortOrder và kiểm tra RecipeID khi xóa. Cả ba FK mới NO ACTION. Admin chặn xóa recipe đang có MealPlanItems, thêm vào chính sách Favorites/Reviews hiện hữu. Meal Planner không xóa UserIngredients hoặc trừ số lượng Pantry. Shopping List đọc dữ liệu recipe và khẩu phần từng item, gộp IngredientID + đúng đơn vị; không thêm bảng mua hàng/checkbox. Chi tiết cột, biểu thức CHECK, index và miền ngày ở [MEAL_PLANNER_DATABASE.md](MEAL_PLANNER_DATABASE.md).
+
+Các số lượng/index ở phần tiếp theo là của **schema nền**; migration bổ sung các ràng buộc mới nêu trên, không thay cấu trúc10 bảng cũ.
 
 SQL Server tạo chỉ mục từ các PK và UNIQUE: email, tên danh mục, tên nguyên liệu, cặp bước nấu, cặp món yêu thích, cặp đánh giá và cặp nguyên liệu cá nhân. Ngoài ra schema có các chỉ mục phục vụ FK và các hướng truy vấn sau:
 

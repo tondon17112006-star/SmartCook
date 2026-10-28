@@ -10,8 +10,8 @@
     "check:db": "node scripts/check-db.js",
     "setup:auth": "node scripts/setup-auth.js",
     "admin:promote": "node scripts/promote-admin.js",
-    "test": "node --test tests/query-validation.test.js tests/error-handler.test.js tests/database-config.test.js tests/suggestion.unit.test.js tests/auth.unit.test.js tests/auth-configuration.test.js tests/favorites.unit.test.js tests/reviews.unit.test.js tests/pantry.unit.test.js tests/admin.unit.test.js tests/security-regression.test.js",
-    "test:integration": "node --test --test-concurrency=1 tests/api.integration.test.js tests/database-failure.integration.test.js tests/suggestion.integration.test.js tests/auth.integration.test.js tests/favorites.integration.test.js tests/reviews.integration.test.js tests/pantry.integration.test.js tests/admin.integration.test.js tests/database-integrity.integration.test.js"
+    "test": "node --test tests/query-validation.test.js tests/error-handler.test.js tests/database-config.test.js tests/suggestion.unit.test.js tests/auth.unit.test.js tests/auth-configuration.test.js tests/favorites.unit.test.js tests/reviews.unit.test.js tests/pantry.unit.test.js tests/admin.unit.test.js tests/security-regression.test.js tests/meal-plan.unit.test.js",
+    "test:integration": "node --test --test-concurrency=1 tests/api.integration.test.js tests/database-failure.integration.test.js tests/suggestion.integration.test.js tests/auth.integration.test.js tests/favorites.integration.test.js tests/reviews.integration.test.js tests/pantry.integration.test.js tests/admin.integration.test.js tests/database-integrity.integration.test.js tests/meal-plan.integration.test.js"
   },
   "type": "module",
   "engines": {

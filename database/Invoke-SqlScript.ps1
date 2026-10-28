@@ -7,7 +7,7 @@ và chứng chỉ đáng tin cậy. Không thay đổi cấu hình SQL Server.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('schema.sql', 'seed.sql', 'verify.sql')]
+    [ValidateSet('schema.sql', 'seed.sql', 'verify.sql', 'migrations/001_weekly_meal_planner.sql')]
     [string]$Script,
 
     [string]$Server = 'lpc:localhost'

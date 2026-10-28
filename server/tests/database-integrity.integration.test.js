@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { before, after, test } from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { getPool, closePool } from '../src/config/database.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { getPool, closePool, sql } from '../src/config/database.js';
 
 // Read-only SQL QA: table variables in verify.sql are transient, no persistent
 // INSERT/UPDATE/DELETE, no constraint/schema changes and no reseeding.
@@ -10,11 +10,14 @@ const tables = {
   Users: ['UserID'], Categories: ['CategoryID'], Ingredients: ['IngredientID'], Recipes: ['RecipeID'],
   RecipeIngredients: ['RecipeID', 'IngredientID'], CookingSteps: ['StepID'], Favorites: ['FavoriteID'],
   Reviews: ['ReviewID'], UserIngredients: ['UserIngredientID'], SearchHistory: ['SearchID'],
+  MealPlans: ['MealPlanID'], MealPlanItems: ['MealPlanItemID'],
 };
 const uniqueKeys = {
   UQ_Users_Email: ['Email'], UQ_Categories_CategoryName: ['CategoryName'], UQ_Ingredients_IngredientName: ['IngredientName'],
   UQ_CookingSteps_RecipeID_StepNumber: ['RecipeID', 'StepNumber'], UQ_Favorites_UserID_RecipeID: ['UserID', 'RecipeID'],
   UQ_Reviews_UserID_RecipeID: ['UserID', 'RecipeID'], UQ_UserIngredients_UserID_IngredientID: ['UserID', 'IngredientID'],
+  UQ_MealPlans_UserID_WeekStartDate: ['UserID', 'WeekStartDate'],
+  UQ_MealPlanItems_Plan_Date_Type_Recipe: ['MealPlanID', 'MealDate', 'MealType', 'RecipeID'],
 };
 let pool, schema, beforeHash;
 async function snapshot() {
@@ -28,11 +31,12 @@ async function snapshot() {
 before(async () => {
   pool = await getPool();
   schema = await readFile(new URL('../../database/schema.sql', import.meta.url), 'utf8');
+  schema += '\n' + await readFile(new URL('../../database/migrations/001_weekly_meal_planner.sql', import.meta.url), 'utf8');
   beforeHash = await snapshot();
 });
 after(async () => { try { if (pool) assert.deepEqual(await snapshot(), beforeHash); } finally { await closePool(); } });
 
-test('QA11-DB-01: expected ten dbo tables each have the correct primary-key columns', async () => {
+test('QA11-DB-01: expected twelve dbo tables each have the correct primary-key columns', async () => {
   const result = await pool.request().query(`SELECT t.name AS tableName, c.name AS columnName, ic.key_ordinal AS ordinal
     FROM sys.tables AS t JOIN sys.key_constraints AS k ON k.parent_object_id = t.object_id AND k.type = 'PK'
     JOIN sys.index_columns AS ic ON ic.object_id = t.object_id AND ic.index_id = k.unique_index_id
@@ -45,7 +49,7 @@ test('QA11-DB-01: expected ten dbo tables each have the correct primary-key colu
 
 test('QA11-DB-02: every expected FK is enabled/trusted with NO ACTION and matches declared columns', async () => {
   const expected = [...schema.matchAll(/CONSTRAINT\s+(FK_\w+)\s+FOREIGN KEY\s*\((\w+)\)\s+REFERENCES dbo\.(\w+)\((\w+)\)/gu)];
-  assert.equal(expected.length, 12);
+  assert.equal(expected.length, 15);
   const result = await pool.request().query(`SELECT fk.name, fk.is_disabled AS disabled, fk.is_not_trusted AS untrusted,
     fk.delete_referential_action AS onDelete, fk.update_referential_action AS onUpdate,
     pc.name AS childColumn, rt.name AS parentTable, rc.name AS parentColumn
@@ -117,6 +121,58 @@ test('QA11-DB-07: existing read-only verify.sql executes against SmartCookDB suc
   const script = await readFile(new URL('../../database/verify.sql', import.meta.url), 'utf8');
   const result = await pool.request().query(script.replace(/^\uFEFF/u, '').replace(/^\s*GO\s*$/gmu, ''));
   const counts = result.recordsets[0];
-  assert.equal(counts.length, 10);
+  assert.equal(counts.length, 12);
   assert.equal(counts.every((row) => Object.hasOwn(tables, row.TableName)), true);
+});
+
+test('QA11-DB-08: an aggregate write across user-owned tables is rolled back without changing seed data', async () => {
+  const transaction = new sql.Transaction(pool);
+  let started = false;
+  const email = `qa11-rollback-${randomUUID()}@invalid.test`;
+
+  try {
+    await transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
+    started = true;
+
+    const user = (await transaction.request()
+      .input('fullName', sql.NVarChar(150), 'QA11 Transaction Rollback')
+      .input('email', sql.NVarChar(255), email)
+      .input('passwordHash', sql.NVarChar(255), 'qa11-transaction-only-not-a-login-secret')
+      .query(`INSERT INTO dbo.Users (FullName, Email, PasswordHash, Role)
+        OUTPUT INSERTED.UserID
+        VALUES (@fullName, @email, @passwordHash, N'User');`)).recordset[0];
+    const userId = Number(user.UserID);
+    assert.ok(Number.isSafeInteger(userId) && userId > 0);
+
+    const recipe = (await transaction.request().query(`SELECT TOP (1) RecipeID FROM dbo.Recipes ORDER BY RecipeID;`)).recordset[0];
+    const ingredient = (await transaction.request().query(`SELECT TOP (1) IngredientID FROM dbo.Ingredients ORDER BY IngredientID;`)).recordset[0];
+    const recipeId = Number(recipe.RecipeID);
+    const ingredientId = Number(ingredient.IngredientID);
+    assert.ok(Number.isSafeInteger(recipeId) && recipeId > 0);
+    assert.ok(Number.isSafeInteger(ingredientId) && ingredientId > 0);
+
+    await transaction.request()
+      .input('userId', sql.Int, userId)
+      .input('recipeId', sql.Int, recipeId)
+      .input('ingredientId', sql.Int, ingredientId)
+      .query(`INSERT INTO dbo.Favorites (UserID, RecipeID) VALUES (@userId, @recipeId);
+        INSERT INTO dbo.Reviews (UserID, RecipeID, Rating, Comment) VALUES (@userId, @recipeId, 5, N'QA11 transaction-only review');
+        INSERT INTO dbo.UserIngredients (UserID, IngredientID, Quantity, Unit) VALUES (@userId, @ingredientId, 1.00, N'phần');
+        INSERT INTO dbo.SearchHistory (UserID, SearchKeyword) VALUES (@userId, N'QA11 transaction rollback');`);
+
+    const created = await transaction.request()
+      .input('userId', sql.Int, userId)
+      .query(`SELECT
+        (SELECT COUNT_BIG(*) FROM dbo.Favorites WHERE UserID = @userId) AS Favorites,
+        (SELECT COUNT_BIG(*) FROM dbo.Reviews WHERE UserID = @userId) AS Reviews,
+        (SELECT COUNT_BIG(*) FROM dbo.UserIngredients WHERE UserID = @userId) AS UserIngredients,
+        (SELECT COUNT_BIG(*) FROM dbo.SearchHistory WHERE UserID = @userId) AS SearchHistory;`);
+    assert.deepEqual(Object.fromEntries(Object.entries(created.recordset[0]).map(([key, value]) => [key, Number(value)])), {
+      Favorites: 1, Reviews: 1, UserIngredients: 1, SearchHistory: 1,
+    });
+  } finally {
+    if (started) await transaction.rollback();
+  }
+
+  assert.deepEqual(await snapshot(), beforeHash);
 });

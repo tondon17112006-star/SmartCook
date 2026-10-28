@@ -15,6 +15,19 @@ Ngày lập: **23/10/2026**. Đối chiếu kết quả tự động và số li
 
 Mẫu ghi kết quả cho mỗi mã: `Ngày giờ — browser/viewport — dữ liệu fixture — thao tác — HTTP/UI quan sát — bằng chứng đã che dữ liệu — Passed/Failed/Not Tested — mã lỗi nếu có`.
 
+## Browser smoke test đã thực hiện
+
+Ngày **23/10/2026**, local browser tại `http://127.0.0.1:5173` được dùng cho một smoke test **read-only**. Không nhập form, tạo account, chọn/tạo dữ liệu hay dùng Admin thật. Console không có error/warning trong lần kiểm tra. Những quan sát dưới đây chỉ xác nhận render/route tại thời điểm đó; **không thay trạng thái toàn bộ ca chi tiết bên dưới thành Passed** vì chưa thực hiện đủ bước, retry/error injection, Back/Forward và hành vi ghi dữ liệu.
+
+| Viewport | Route | Quan sát thực tế |
+| --- | --- | --- |
+| 375×812 | `/` | Menu mobile ở trạng thái collapse, 8 thẻ featured hiển thị, document width 360px (không overflow ngang) |
+| 768×900 | `/recipes` | Search/filter/pagination và 20 công thức hiển thị, document width 753px (không overflow ngang) |
+| 1024×900 | `/recipes/8` | Trứng chiên, 5 nguyên liệu và 4 bước hiển thị, document width 1009px (không overflow ngang) |
+| 1440×960 | `/ingredients` | Navigation desktop, khối chọn nguyên liệu và catalog 64 dòng hiển thị, document width 1425px (không overflow ngang) |
+
+Guest mở trực tiếp `/favorites`, `/pantry` và `/admin` đều được chuyển về `/login`; trang login đã render trường email/password. Đây là bằng chứng phần guard dành cho Guest, không xác nhận các thao tác Favorites/Pantry/Admin có ghi dữ liệu. Các ca User A/B, fixture Admin, modal/form/keyboard và HTTPS thực vẫn giữ **Not Tested** cho tới khi có môi trường/browser test có dữ liệu rollback phù hợp.
+
 ## 18 đường dẫn cần nghiệm thu
 
 Mỗi dòng dưới đây cần thử thêm reload trực tiếp URL, Back/Forward và điều hướng bằng menu khi áp dụng. Với trang có API, thử kết nối bình thường, chặn request bằng DevTools để xem lỗi/retry, và dữ liệu rỗng trong môi trường fixture. Không dừng SQL Server thật để tạo lỗi.

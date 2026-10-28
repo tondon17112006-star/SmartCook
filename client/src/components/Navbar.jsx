@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { ArrowUpRight, ChefHat, LoaderCircle, LogOut, Menu, ShieldCheck, X } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, ChefHat, LoaderCircle, LogOut, Menu, ShieldCheck, X } from 'lucide-react'
 import useAuth from '../hooks/useAuth.js'
 import UserAvatar from './UserAvatar.jsx'
 
@@ -9,7 +9,7 @@ const links = [
   { to: '/recipes', label: 'Khám phá món ăn' },
   { to: '/ingredients', label: 'Tìm món từ nguyên liệu' },
   { to: '/favorites', label: 'Món yêu thích' },
-  { to: '/pantry', label: 'Tủ nguyên liệu' },
+  { to: '/meal-planner', label: 'Lịch nấu ăn' },
 ]
 
 export default function Navbar() {
@@ -64,7 +64,7 @@ export default function Navbar() {
           <span>Smart<span className="text-forest">Cook</span></span>
         </Link>
         <nav aria-label="Điều hướng chính" className="hidden items-center gap-4 xl:flex">
-          {accountLinks.map(({ to, label, end }) => <NavLink key={to} to={to} end={end} className={({ isActive }) => `relative whitespace-nowrap py-7 text-sm font-medium transition-colors hover:text-forest ${isActive ? 'text-forest after:absolute after:inset-x-0 after:bottom-4 after:h-0.5 after:rounded-full after:bg-forest' : 'text-ink/75'}`}>{label}</NavLink>)}
+          {accountLinks.map(({ to, label, end }) => <NavLink key={to} to={to} end={end} className={({ isActive }) => `relative inline-flex items-center gap-1.5 whitespace-nowrap py-7 text-sm font-medium transition-colors hover:text-forest ${isActive ? 'text-forest after:absolute after:inset-x-0 after:bottom-4 after:h-0.5 after:rounded-full after:bg-forest' : 'text-ink/75'}`}>{to === '/meal-planner' && <CalendarDays size={17} aria-hidden="true" />}{label}</NavLink>)}
         </nav>
         <div className="flex shrink-0 items-center gap-2">
           <Link to="/ingredients" onClick={() => setOpen(false)} className="button-primary hidden whitespace-nowrap px-4 sm:inline-flex">Tìm món ngay <ArrowUpRight size={17} aria-hidden="true" /></Link>
@@ -86,7 +86,7 @@ export default function Navbar() {
       </div>
       <nav id="mobile-menu" aria-label="Điều hướng trên di động" hidden={!open} className="border-t border-stone-100 bg-white xl:hidden">
         <div className="container-shell flex flex-col gap-1 py-4">
-          {accountLinks.map(({ to, label, end }) => <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium ${isActive ? 'bg-forest/10 text-dark-green' : 'text-ink/75 hover:bg-cream'}`}>{to === '/admin' && <ShieldCheck size={17} aria-hidden="true" />}{label}</NavLink>)}
+          {accountLinks.map(({ to, label, end }) => <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium ${isActive ? 'bg-forest/10 text-dark-green' : 'text-ink/75 hover:bg-cream'}`}>{to === '/admin' && <ShieldCheck size={17} aria-hidden="true" />}{to === '/meal-planner' && <CalendarDays size={17} aria-hidden="true" />}{label}</NavLink>)}
           <div className="mt-2 border-t border-stone-100 pt-3">
             {isAuthenticated ? <>
               <Link to="/profile" onClick={() => setOpen(false)} className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2 hover:bg-cream">

@@ -15,7 +15,7 @@ function isSessionRequest(config) {
   const path = config?.url || ''
   return /^\/(?:api\/)?auth\/(?:me|profile)(?:\?|$)/u.test(path)
     || /^\/(?:api\/)?admin(?:\/|\?|$)/u.test(path)
-    || /^\/(?:api\/)?(?:favorites|pantry|reviews)(?:\/|\?|$)/u.test(path)
+    || /^\/(?:api\/)?(?:favorites|pantry|meal-plans|reviews)(?:\/|\?|$)/u.test(path)
     || /^\/(?:api\/)?recipes\/[1-9]\d*\/reviews\/mine(?:\?|$)/u.test(path)
     || (config?.method?.toLowerCase() !== 'get' && /^\/(?:api\/)?recipes\/[1-9]\d*\/reviews(?:\?|$)/u.test(path))
 }

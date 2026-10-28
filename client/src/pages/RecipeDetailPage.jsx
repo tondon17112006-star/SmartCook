@@ -1,4 +1,4 @@
-import { ArrowLeft, ChefHat, Clock3, CookingPot, Play, RotateCcw, Timer, UsersRound, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, ChefHat, Clock3, CookingPot, Play, RotateCcw, Timer, UsersRound, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import CookingMode from '../components/CookingMode'
@@ -13,6 +13,8 @@ import FavoriteButton from '../components/FavoriteButton.jsx'
 import ReviewList from '../components/ReviewList.jsx'
 import useApiResource from '../hooks/useApiResource'
 import useRecipeCooking from '../hooks/useRecipeCooking'
+import useAuth from '../hooks/useAuth.js'
+import AddMealDialog from '../components/meal-planner/AddMealDialog.jsx'
 import { getRecipe } from '../services/catalogService'
 
 function BackToRecipes() {
@@ -69,13 +71,23 @@ function RecipeContent({ recipeId }) {
 
 function DetailedRecipe({ recipe }) {
   const location = useLocation()
+  const { isAuthenticated, currentUser, sessionGeneration } = useAuth()
   const entry = location.state
   const cameFromSuggestions = entry?.from === '/suggestions'
     && Number.isInteger(entry.recipeId) && entry.recipeId === recipe.recipeId
-  const suggestedServings = cameFromSuggestions && Number.isInteger(entry.suggestedServings)
-    && entry.suggestedServings >= 1 && entry.suggestedServings <= 20 ? entry.suggestedServings : undefined
+  const search = new URLSearchParams(location.search)
+  const rawPlannedServings = search.get('servings')
+  const cameFromMealPlanner = search.get('source') === 'meal-planner'
+    && search.getAll('source').length === 1 && search.getAll('servings').length === 1
+    && /^(?:[1-9]|1\d|20)$/u.test(rawPlannedServings ?? '')
+  const suggestedServings = cameFromMealPlanner ? Number(rawPlannedServings)
+    : cameFromSuggestions && Number.isInteger(entry.suggestedServings)
+      && entry.suggestedServings >= 1 && entry.suggestedServings <= 20 ? entry.suggestedServings : undefined
   const cooking = useRecipeCooking(recipe, { suggestedServings, entryKey: location.key })
-  const [isCooking, setIsCooking] = useState(false)
+  const [isCooking, setIsCooking] = useState(() => cameFromMealPlanner && search.get('cook') === '1' && Boolean(recipe.steps?.length))
+  const mealScope = `${currentUser?.userId ?? 'guest'}:${sessionGeneration}`
+  const [addingMeal, setAddingMeal] = useState(null)
+  const [mealSaved, setMealSaved] = useState(null)
   const startButton = useRef(null)
   const categoryName = recipe.category?.categoryName ?? recipe.categoryName
   const facts = [
@@ -136,8 +148,10 @@ function DetailedRecipe({ recipe }) {
           <div className="mt-8 flex flex-wrap gap-3">
             <FavoriteButton recipeId={recipe.recipeId} recipeName={recipe.recipeName} />
             <button ref={startButton} type="button" disabled={!cooking.steps.length} onClick={() => setIsCooking(true)} className="button-primary"><Play size={18} aria-hidden="true" />Bắt đầu nấu</button>
-            <Link to={cameFromSuggestions ? '/suggestions' : '/recipes'} className="button-secondary"><ArrowLeft size={18} aria-hidden="true" />Quay lại</Link>
+            {isAuthenticated ? <button type="button" onClick={() => { setAddingMeal(mealScope); setMealSaved(null) }} className="button-secondary"><CalendarDays size={18} aria-hidden="true" />Thêm vào lịch nấu ăn</button> : <Link to="/login" state={{ from: `${location.pathname}${location.search}` }} className="button-secondary"><CalendarDays size={18} aria-hidden="true" />Đăng nhập để lên lịch</Link>}
+            <Link to={cameFromMealPlanner ? '/meal-planner' : cameFromSuggestions ? '/suggestions' : '/recipes'} className="button-secondary"><ArrowLeft size={18} aria-hidden="true" />Quay lại</Link>
           </div>
+          {mealSaved === mealScope && isAuthenticated && <p role="status" className="mt-4 text-sm font-semibold text-forest">Đã thêm món vào lịch nấu ăn. <Link to="/meal-planner" className="underline">Xem lịch</Link></p>}
           {!cooking.steps.length && <p className="mt-3 text-sm leading-6 text-ink/65">Hướng dẫn đang được cập nhật, bạn chưa thể bắt đầu chế độ nấu.</p>}
         </div>
       </div>
@@ -154,6 +168,7 @@ function DetailedRecipe({ recipe }) {
       </div>
       <ReviewList recipeId={recipe.recipeId} />
       <RelatedRecipes recipe={recipe} />
+      {addingMeal === mealScope && isAuthenticated && <AddMealDialog key={mealScope} recipe={recipe} initialServings={cooking.servings} onClose={() => setAddingMeal(null)} onSaved={() => { setAddingMeal(null); setMealSaved(mealScope) }} />}
     </article>
   )
 }

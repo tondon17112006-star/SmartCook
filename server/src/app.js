@@ -10,6 +10,7 @@ import { createAdminRouter } from './routes/admin.routes.js';
 import { createFavoriteRouter } from './routes/favorite.routes.js';
 import { createPublicReviewRouter, createReviewRouter } from './routes/review.routes.js';
 import { createPantryRouter } from './routes/pantry.routes.js';
+import { createMealPlanRouter } from './routes/meal-plan.routes.js';
 
 export const app = express();
 
@@ -22,7 +23,7 @@ app.use((_req, res, next) => {
   next();
 });
 // Include early CORS/body/configuration errors in the auth cache policy.
-app.use(['/api/auth', '/api/admin', '/api/favorites', '/api/pantry', '/api/reviews', '/api/recipes/:id/reviews'], (_req, res, next) => {
+app.use(['/api/auth', '/api/admin', '/api/favorites', '/api/pantry', '/api/meal-plans', '/api/reviews', '/api/recipes/:id/reviews'], (_req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
 });
@@ -43,7 +44,7 @@ app.use('/api/recipes', createPublicReviewRouter());
 let authRoutes;
 // Missing auth secrets must not take the public recipe API offline.
 app.use('/api', (req, res, next) => {
-  if (!/^\/(auth|admin|favorites|pantry|reviews)(\/|$)/u.test(req.path)
+  if (!/^\/(auth|admin|favorites|pantry|meal-plans|reviews)(\/|$)/u.test(req.path)
       && !/^\/recipes\/[^/]+\/reviews(?:\/mine)?\/?$/u.test(req.path)) return next();
   res.set('Cache-Control', 'no-store');
   if (!authRoutes) {
@@ -54,6 +55,7 @@ app.use('/api', (req, res, next) => {
       router.use('/admin', createAdminRouter({ security }));
       router.use('/favorites', createFavoriteRouter({ security }));
       router.use('/pantry', createPantryRouter({ security }));
+      router.use('/meal-plans', createMealPlanRouter({ security }));
       router.use(createReviewRouter({ security }));
       authRoutes = router;
     } catch {

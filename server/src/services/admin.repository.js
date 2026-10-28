@@ -241,9 +241,11 @@ export function createAdminRepository({ request = async () => (await getPool()).
         const query = await scopedRequest(); query.input('id', sql.Int, id);
         const result = await query.query(`SELECT RecipeID FROM dbo.Recipes WITH (UPDLOCK, HOLDLOCK) WHERE RecipeID = @id;
           SELECT (SELECT COUNT_BIG(*) FROM dbo.Favorites WITH (HOLDLOCK) WHERE RecipeID = @id)
-            + (SELECT COUNT_BIG(*) FROM dbo.Reviews WITH (HOLDLOCK) WHERE RecipeID = @id) AS linked;`);
+            + (SELECT COUNT_BIG(*) FROM dbo.Reviews WITH (HOLDLOCK) WHERE RecipeID = @id) AS linked,
+            (SELECT COUNT_BIG(*) FROM dbo.MealPlanItems WITH (HOLDLOCK) WHERE RecipeID = @id) AS planned;`);
         if (!result.recordsets[0].length) return false;
         if (Number(result.recordsets[1][0].linked)) throw new HttpError(409, 'Món ăn đã có lượt yêu thích hoặc đánh giá nên không thể xóa.');
+        if (Number(result.recordsets[1][0].planned)) throw new HttpError(409, 'Không thể xóa món ăn vì đang được sử dụng trong lịch nấu ăn.');
         const remove = await scopedRequest(); remove.input('id', sql.Int, id);
         await remove.query(`DELETE FROM dbo.CookingSteps WHERE RecipeID = @id;
           DELETE FROM dbo.RecipeIngredients WHERE RecipeID = @id;
